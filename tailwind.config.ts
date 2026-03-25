@@ -13,6 +13,10 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        heading: ["'Press Start 2P'", "monospace"],
+        body: ["'VT323'", "monospace"],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -47,6 +51,21 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        coin: {
+          DEFAULT: "hsl(var(--coin))",
+          foreground: "hsl(var(--coin-foreground))",
+        },
+        rarity: {
+          common: "hsl(var(--rarity-common))",
+          uncommon: "hsl(var(--rarity-uncommon))",
+          rare: "hsl(var(--rarity-rare))",
+          epic: "hsl(var(--rarity-epic))",
+          legendary: "hsl(var(--rarity-legendary))",
+        },
+        plot: {
+          empty: "hsl(var(--plot-empty))",
+          locked: "hsl(var(--plot-locked))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
@@ -65,20 +84,12 @@ export default {
       },
       keyframes: {
         "accordion-down": {
-          from: {
-            height: "0",
-          },
-          to: {
-            height: "var(--radix-accordion-content-height)",
-          },
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
         },
         "accordion-up": {
-          from: {
-            height: "var(--radix-accordion-content-height)",
-          },
-          to: {
-            height: "0",
-          },
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
         },
       },
       animation: {
