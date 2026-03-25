@@ -1,9 +1,12 @@
-import { createContext, useContext, useReducer, useEffect, useCallback, useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useReducer, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
-  type Seed, type Rarity, type SeedType,
+  type Seed, type Rarity, type SeedType, type SkillId,
   RARITY_INCOME, SEED_TYPES, PACKS, PLOT_COSTS,
   TOTAL_PLOTS, INCOME_INTERVAL, MAX_OFFLINE_TICKS, STORAGE_KEY, RARITIES,
+  SKILLS, xpForLevel, XP_REWARDS, FERTILIZER_DURATION, WATERING_DURATION,
+  REFORGE_RATES, getNextRarity,
 } from './constants';
+import { SFX } from './sounds';
 import { toast } from 'sonner';
 
 // === STATE ===
@@ -11,13 +14,23 @@ import { toast } from 'sonner';
 export interface PlotState {
   unlocked: boolean;
   seed: Seed | null;
+  fertilizedUntil: number | null; // timestamp
+  wateredUntil: number | null; // timestamp
 }
+
+export type SkillLevels = Record<SkillId, number>; // 0 = not unlocked, 1-3 = tier
 
 export interface GameState {
   money: number;
   inventory: Seed[];
   plots: PlotState[];
   lastTick: number;
+  level: number;
+  xp: number;
+  skillPoints: number;
+  skills: SkillLevels;
+  fertilizers: number; // owned fertilizer items
+  muted: boolean;
 }
 
 const defaultState = (): GameState => ({
@@ -26,8 +39,16 @@ const defaultState = (): GameState => ({
   plots: Array.from({ length: TOTAL_PLOTS }, (_, i) => ({
     unlocked: i === 0,
     seed: null,
+    fertilizedUntil: null,
+    wateredUntil: null,
   })),
   lastTick: Date.now(),
+  level: 1,
+  xp: 0,
+  skillPoints: 0,
+  skills: { packDiscount: 0, yieldBoost: 0, speedBoost: 0, autoWater: 0 },
+  fertilizers: 0,
+  muted: false,
 });
 
 // === ACTIONS ===
@@ -41,7 +62,14 @@ type Action =
   | { type: 'UNLOCK_PLOT'; plotIndex: number }
   | { type: 'TICK_INCOME'; amount: number }
   | { type: 'RESET_GAME' }
-  | { type: 'SET_STATE'; state: GameState };
+  | { type: 'SET_STATE'; state: GameState }
+  | { type: 'ADD_XP'; amount: number }
+  | { type: 'UNLOCK_SKILL'; skillId: SkillId }
+  | { type: 'BUY_FERTILIZER' }
+  | { type: 'APPLY_FERTILIZER'; plotIndex: number }
+  | { type: 'WATER_PLOT'; plotIndex: number }
+  | { type: 'REFORGE'; seedIds: string[] }
+  | { type: 'TOGGLE_MUTE' };
 
 let idCounter = Date.now();
 const genId = () => `seed_${idCounter++}`;
@@ -73,6 +101,62 @@ export function rollPack(packId: number): Seed[] {
   return seeds;
 }
 
+// === SKILL HELPERS ===
+
+export function getPackDiscount(skills: SkillLevels): number {
+  const tier = skills.packDiscount;
+  if (tier === 0) return 0;
+  return SKILLS.find(s => s.id === 'packDiscount')!.tiers[tier - 1].effect;
+}
+
+export function getYieldMultiplier(skills: SkillLevels): number {
+  const tier = skills.yieldBoost;
+  if (tier === 0) return 1;
+  return 1 + SKILLS.find(s => s.id === 'yieldBoost')!.tiers[tier - 1].effect / 100;
+}
+
+export function getBaseInterval(skills: SkillLevels): number {
+  const tier = skills.speedBoost;
+  if (tier === 0) return INCOME_INTERVAL;
+  return SKILLS.find(s => s.id === 'speedBoost')!.tiers[tier - 1].effect;
+}
+
+export function getAutoWaterInterval(skills: SkillLevels): number | null {
+  const tier = skills.autoWater;
+  if (tier === 0) return null;
+  return SKILLS.find(s => s.id === 'autoWater')!.tiers[tier - 1].effect;
+}
+
+export function getDiscountedCost(baseCost: number, skills: SkillLevels): number {
+  const discount = getPackDiscount(skills);
+  return Math.floor(baseCost * (1 - discount / 100));
+}
+
+// === XP HELPERS ===
+
+function addXpToState(state: GameState, amount: number): GameState {
+  let xp = state.xp + amount;
+  let level = state.level;
+  let skillPoints = state.skillPoints;
+  let leveledUp = false;
+
+  while (xp >= xpForLevel(level)) {
+    xp -= xpForLevel(level);
+    level++;
+    skillPoints++;
+    leveledUp = true;
+  }
+
+  if (leveledUp) {
+    setTimeout(() => {
+      SFX.levelUp();
+      toast(`🎉 Level Up! You're now level ${level}!`);
+    }, 0);
+  }
+
+  return { ...state, xp, level, skillPoints };
+}
+
 // === REDUCER ===
 
 function gameReducer(state: GameState, action: Action): GameState {
@@ -82,8 +166,11 @@ function gameReducer(state: GameState, action: Action): GameState {
 
     case 'OPEN_PACK': {
       const pack = PACKS.find(p => p.id === action.packId);
-      if (!pack || state.money < pack.cost) return state;
-      return { ...state, money: state.money - pack.cost };
+      if (!pack || state.level < pack.minLevel) return state;
+      const cost = getDiscountedCost(pack.cost, state.skills);
+      if (state.money < cost) return state;
+      const s = { ...state, money: state.money - cost };
+      return addXpToState(s, XP_REWARDS.packOpen);
     }
 
     case 'PLANT_SEED': {
@@ -127,8 +214,91 @@ function gameReducer(state: GameState, action: Action): GameState {
       return { ...state, plots: newPlots, money: state.money - cost };
     }
 
-    case 'TICK_INCOME':
-      return { ...state, money: state.money + action.amount, lastTick: Date.now() };
+    case 'TICK_INCOME': {
+      const s = { ...state, money: state.money + action.amount, lastTick: Date.now() };
+      return addXpToState(s, XP_REWARDS.incomeTick);
+    }
+
+    case 'ADD_XP':
+      return addXpToState(state, action.amount);
+
+    case 'UNLOCK_SKILL': {
+      const skill = SKILLS.find(s => s.id === action.skillId);
+      if (!skill) return state;
+      const currentTier = state.skills[action.skillId];
+      if (currentTier >= skill.tiers.length) return state;
+      const nextTier = skill.tiers[currentTier];
+      if (state.skillPoints < nextTier.cost) return state;
+      return {
+        ...state,
+        skillPoints: state.skillPoints - nextTier.cost,
+        skills: { ...state.skills, [action.skillId]: currentTier + 1 },
+      };
+    }
+
+    case 'BUY_FERTILIZER': {
+      const cost = 50;
+      if (state.money < cost) return state;
+      return { ...state, money: state.money - cost, fertilizers: state.fertilizers + 1 };
+    }
+
+    case 'APPLY_FERTILIZER': {
+      if (state.fertilizers <= 0) return state;
+      const plot = state.plots[action.plotIndex];
+      if (!plot || !plot.unlocked || !plot.seed) return state;
+      const now = Date.now();
+      const currentEnd = plot.fertilizedUntil && plot.fertilizedUntil > now ? plot.fertilizedUntil : now;
+      const newPlots = [...state.plots];
+      newPlots[action.plotIndex] = { ...plot, fertilizedUntil: currentEnd + FERTILIZER_DURATION };
+      return { ...state, plots: newPlots, fertilizers: state.fertilizers - 1 };
+    }
+
+    case 'WATER_PLOT': {
+      const plot = state.plots[action.plotIndex];
+      if (!plot || !plot.unlocked || !plot.seed) return state;
+      const now = Date.now();
+      const newPlots = [...state.plots];
+      newPlots[action.plotIndex] = { ...plot, wateredUntil: now + WATERING_DURATION };
+      return { ...state, plots: newPlots };
+    }
+
+    case 'REFORGE': {
+      if (action.seedIds.length !== 3) return state;
+      const seeds = action.seedIds.map(id => state.inventory.find(s => s.id === id)).filter(Boolean) as Seed[];
+      if (seeds.length !== 3) return state;
+      // All same type
+      if (new Set(seeds.map(s => s.type)).size !== 1) return state;
+      // All same rarity
+      if (new Set(seeds.map(s => s.rarity)).size !== 1) return state;
+      const rarity = seeds[0].rarity;
+      const seedType = seeds[0].type;
+      const nextRarity = getNextRarity(rarity);
+      if (!nextRarity) return state;
+
+      // Remove 3 seeds
+      let newInventory = [...state.inventory];
+      for (const id of action.seedIds) {
+        const idx = newInventory.findIndex(s => s.id === id);
+        if (idx !== -1) newInventory.splice(idx, 1);
+      }
+
+      // Roll for success
+      const rate = REFORGE_RATES[rarity] || 0;
+      const success = Math.random() * 100 < rate;
+
+      let s = { ...state, inventory: newInventory };
+      s = addXpToState(s, XP_REWARDS.reforge);
+
+      if (success) {
+        const newSeed: Seed = { id: genId(), type: seedType, rarity: nextRarity };
+        s.inventory = [...s.inventory, newSeed];
+      }
+
+      return s;
+    }
+
+    case 'TOGGLE_MUTE':
+      return { ...state, muted: !state.muted };
 
     case 'RESET_GAME':
       return defaultState();
@@ -148,6 +318,7 @@ interface GameContextType {
   dispatch: React.Dispatch<Action>;
   totalIncome: number;
   floatingIncomes: Map<number, number>;
+  currentInterval: number;
 }
 
 const GameContext = createContext<GameContextType | null>(null);
@@ -165,7 +336,8 @@ function loadState(): GameState {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      return { ...defaultState(), ...parsed };
+      const def = defaultState();
+      return { ...def, ...parsed, skills: { ...def.skills, ...parsed.skills } };
     }
   } catch { /* ignore */ }
   return defaultState();
@@ -177,8 +349,8 @@ function saveState(state: GameState) {
 
 export function GameProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(gameReducer, null, loadState);
-  const floatingIncomesRef = useRef<Map<number, number>>(new Map());
   const [floatingIncomes, setFloatingIncomes] = useState<Map<number, number>>(new Map());
+  const currentInterval = getBaseInterval(state.skills);
 
   // Save on every state change
   useEffect(() => {
@@ -190,10 +362,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
     const saved = loadState();
     const now = Date.now();
     const elapsed = now - saved.lastTick;
-    const ticksMissed = Math.min(Math.floor(elapsed / INCOME_INTERVAL), MAX_OFFLINE_TICKS);
+    const interval = getBaseInterval(saved.skills);
+    const ticksMissed = Math.min(Math.floor(elapsed / interval), MAX_OFFLINE_TICKS);
 
     if (ticksMissed > 0) {
-      const income = calcTotalIncome(saved);
+      const income = calcTotalIncome(saved, now);
       const total = ticksMissed * income;
       if (total > 0) {
         dispatch({ type: 'TICK_INCOME', amount: total });
@@ -202,41 +375,64 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Auto-water
+  useEffect(() => {
+    const autoInterval = getAutoWaterInterval(state.skills);
+    if (!autoInterval) return;
+    const timer = setInterval(() => {
+      state.plots.forEach((plot, i) => {
+        if (plot.unlocked && plot.seed) {
+          const now = Date.now();
+          if (!plot.wateredUntil || plot.wateredUntil <= now) {
+            dispatch({ type: 'WATER_PLOT', plotIndex: i });
+          }
+        }
+      });
+    }, autoInterval);
+    return () => clearInterval(timer);
+  }, [state.skills.autoWater, state.plots]);
+
   // Passive income interval
   useEffect(() => {
     const interval = setInterval(() => {
-      const income = calcTotalIncome(state);
+      const now = Date.now();
+      const income = calcTotalIncome(state, now);
       if (income > 0) {
         dispatch({ type: 'TICK_INCOME', amount: income });
-        // Set floating incomes for each planted plot
+        SFX.coinTick();
         const newFloating = new Map<number, number>();
         state.plots.forEach((plot, i) => {
           if (plot.seed) {
-            newFloating.set(i, RARITY_INCOME[plot.seed.rarity]);
+            newFloating.set(i, getPlotIncome(plot, state.skills, now));
           }
         });
         setFloatingIncomes(new Map(newFloating));
-        // Clear after animation
         setTimeout(() => setFloatingIncomes(new Map()), 1500);
       }
-    }, INCOME_INTERVAL);
+    }, currentInterval);
     return () => clearInterval(interval);
-  }, [state.plots]);
+  }, [state.plots, currentInterval]);
 
-  const totalIncome = calcTotalIncome(state);
+  const totalIncome = calcTotalIncome(state, Date.now());
 
   return (
-    <GameContext.Provider value={{ state, dispatch, totalIncome, floatingIncomes }}>
+    <GameContext.Provider value={{ state, dispatch, totalIncome, floatingIncomes, currentInterval }}>
       {children}
     </GameContext.Provider>
   );
 }
 
-function calcTotalIncome(state: GameState): number {
-  return state.plots.reduce((sum, plot) => {
-    if (plot.seed) return sum + RARITY_INCOME[plot.seed.rarity];
-    return sum;
-  }, 0);
+function getPlotIncome(plot: PlotState, skills: SkillLevels, now: number): number {
+  if (!plot.seed) return 0;
+  let income = RARITY_INCOME[plot.seed.rarity];
+  income = Math.floor(income * getYieldMultiplier(skills));
+  // Watering 2x
+  if (plot.wateredUntil && plot.wateredUntil > now) income *= 2;
+  // Fertilizer 2x
+  if (plot.fertilizedUntil && plot.fertilizedUntil > now) income *= 2;
+  return income;
 }
 
-
+function calcTotalIncome(state: GameState, now: number): number {
+  return state.plots.reduce((sum, plot) => sum + getPlotIncome(plot, state.skills, now), 0);
+}

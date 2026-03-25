@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useGame } from '../game/state';
 import { RARITY_INCOME, SEED_EMOJIS, type Seed } from '../game/constants';
+import { SFX } from '../game/sounds';
 import { toast } from 'sonner';
 import PlotPickerModal from './PlotPickerModal';
 
@@ -10,6 +11,7 @@ export default function Inventory() {
 
   const handleSell = (seed: Seed) => {
     const value = RARITY_INCOME[seed.rarity];
+    SFX.buttonClick();
     dispatch({ type: 'SELL_SEED', seedId: seed.id });
     toast.success(`Sold ${SEED_EMOJIS[seed.type]} ${seed.type} for $${value}!`);
   };
@@ -20,11 +22,13 @@ export default function Inventory() {
       toast.error('No empty plots available!');
       return;
     }
+    SFX.buttonClick();
     setPlantingSeed(seed);
   };
 
   const handlePlotSelect = (plotIndex: number) => {
     if (!plantingSeed) return;
+    SFX.plant();
     dispatch({ type: 'PLANT_SEED', seedId: plantingSeed.id, plotIndex });
     toast.success(`Planted ${SEED_EMOJIS[plantingSeed.type]} ${plantingSeed.type}! 🌱`);
     setPlantingSeed(null);
