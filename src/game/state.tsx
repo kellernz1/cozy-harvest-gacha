@@ -239,4 +239,4 @@ function calcTotalIncome(state: GameState): number {
   }, 0);
 }
 
-import { useState } from 'react';
+
