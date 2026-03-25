@@ -20,17 +20,17 @@ export const RARITY_COLORS: Record<Rarity, string> = {
   Legendary: 'rarity-legendary',
 };
 
-export type SeedType = 'Apple' | 'Orange' | 'Banana' | 'Strawberry' | 'Blueberry';
+export type SeedType = 'Apple' | 'Orange' | 'Banana' | 'Strawberry' | 'Pineapple';
 
 export const SEED_EMOJIS: Record<SeedType, string> = {
   Apple: '🍎',
   Orange: '🍊',
   Banana: '🍌',
   Strawberry: '🍓',
-  Blueberry: '🫐',
+  Pineapple: '🍍',
 };
 
-export const SEED_TYPES: SeedType[] = ['Apple', 'Orange', 'Banana', 'Strawberry', 'Blueberry'];
+export const SEED_TYPES: SeedType[] = ['Apple', 'Orange', 'Banana', 'Strawberry', 'Pineapple'];
 
 export interface Seed {
   id: string;

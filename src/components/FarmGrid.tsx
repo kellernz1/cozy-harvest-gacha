@@ -8,7 +8,6 @@ export default function FarmGrid() {
   const { state, dispatch, floatingIncomes } = useGame();
   const [, forceUpdate] = useState(0);
 
-  // Re-render every second for countdowns
   useEffect(() => {
     const t = setInterval(() => forceUpdate(n => n + 1), 1000);
     return () => clearInterval(t);
@@ -60,18 +59,17 @@ export default function FarmGrid() {
   const now = Date.now();
 
   return (
-    <div className="p-4">
-      <h2 className="font-heading text-xs mb-4 text-accent">Your Farm</h2>
-      <div className="grid grid-cols-3 gap-3 max-w-md mx-auto">
+    <div className="p-6">
+      <h2 className="font-heading text-xl font-semibold mb-6 text-primary">Your Farm</h2>
+      <div className="grid grid-cols-3 gap-4 max-w-2xl mx-auto">
         {state.plots.map((plot, i) => {
           const isWatered = plot.wateredUntil != null && plot.wateredUntil > now;
           const isFertilized = plot.fertilizedUntil != null && plot.fertilizedUntil > now;
 
           return (
             <div key={i} className="relative">
-              {/* Floating income */}
               {floatingIncomes.has(i) && (
-                <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-primary font-heading text-xs animate-float-up z-10 pointer-events-none">
+                <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-primary font-heading text-sm font-semibold animate-float-up z-10 pointer-events-none drop-shadow-lg">
                   +${floatingIncomes.get(i)}
                 </div>
               )}
@@ -80,42 +78,49 @@ export default function FarmGrid() {
                 <button
                   onClick={() => handleUnlock(i)}
                   disabled={state.money < PLOT_COSTS[i] || state.level < PLOT_LEVEL_REQUIREMENTS[i]}
-                  className="w-full aspect-square bg-plot-locked rounded border-2 border-border flex flex-col items-center justify-center gap-1 hover:border-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full aspect-square backdrop-blur-md bg-gradient-to-br from-muted/50 to-plot-locked/50 rounded-2xl border border-border/50 flex flex-col items-center justify-center gap-2 hover:border-primary/50 hover:shadow-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg"
                 >
-                  <span className="text-2xl">🔒</span>
-                  <span className="font-heading text-[8px] text-muted-foreground">${PLOT_COSTS[i]}</span>
+                  <span className="text-3xl">🔒</span>
+                  <span className="font-body text-xs text-muted-foreground font-medium">${PLOT_COSTS[i]}</span>
                   {PLOT_LEVEL_REQUIREMENTS[i] > 1 && (
-                    <span className="font-heading text-[7px] text-accent">Lv.{PLOT_LEVEL_REQUIREMENTS[i]}</span>
+                    <span className="font-body text-xs text-primary font-semibold">Lv.{PLOT_LEVEL_REQUIREMENTS[i]}</span>
                   )}
                 </button>
               ) : plot.seed ? (
-                <div className={`w-full aspect-square bg-plot-empty rounded border-2 flex flex-col items-center justify-center gap-0.5 relative
-                  ${isWatered ? 'border-blue-400/60' : 'border-primary/30'}
-                  ${!isWatered && plot.seed ? 'opacity-80' : ''}
+                <div className={`w-full aspect-square backdrop-blur-lg bg-gradient-to-br rounded-2xl border flex flex-col items-center justify-center gap-1 relative shadow-xl transition-all
+                  ${isWatered
+                    ? 'from-blue-500/20 to-cyan-500/10 border-blue-400/50 shadow-blue-500/20'
+                    : 'from-green-500/10 to-emerald-500/5 border-primary/30'}
+                  ${!isWatered && plot.seed ? 'opacity-90' : ''}
                 `}>
-                  {/* Status indicators */}
-                  <div className="absolute top-1 left-1 flex gap-0.5">
-                    {isWatered && <span className="text-[10px]" title={`Water: ${formatTime(plot.wateredUntil! - now)}`}>💧</span>}
-                    {isFertilized && <span className="text-[10px]" title={`Fert: ${formatTime(plot.fertilizedUntil! - now)}`}>🌿</span>}
+                  <div className="absolute top-2 left-2 flex gap-1">
+                    {isWatered && (
+                      <span className="text-sm backdrop-blur-md bg-blue-500/30 px-1.5 py-0.5 rounded-lg border border-blue-400/40" title={`Water: ${formatTime(plot.wateredUntil! - now)}`}>
+                        💧
+                      </span>
+                    )}
+                    {isFertilized && (
+                      <span className="text-sm backdrop-blur-md bg-green-500/30 px-1.5 py-0.5 rounded-lg border border-green-400/40" title={`Fert: ${formatTime(plot.fertilizedUntil! - now)}`}>
+                        🌿
+                      </span>
+                    )}
                   </div>
 
-                  <span className="text-2xl">{SEED_EMOJIS[plot.seed.type]}</span>
-                  <span className="text-[10px] text-foreground">{plot.seed.type}</span>
-                  <span className={`text-[8px] font-heading text-rarity-${plot.seed.rarity.toLowerCase()}`}>
+                  <span className="text-4xl drop-shadow-lg">{SEED_EMOJIS[plot.seed.type]}</span>
+                  <span className="text-xs text-foreground font-medium">{plot.seed.type}</span>
+                  <span className={`text-xs font-heading font-semibold text-rarity-${plot.seed.rarity.toLowerCase()} px-2 py-0.5 rounded-lg backdrop-blur-sm bg-white/5 border border-white/10`}>
                     {plot.seed.rarity}
                   </span>
 
-                  {/* Countdown timers */}
-                  <div className="flex gap-1 text-[7px] text-muted-foreground">
+                  <div className="flex gap-1 text-[10px] text-muted-foreground font-medium">
                     {isWatered && <span>💧{formatTime(plot.wateredUntil! - now)}</span>}
                     {isFertilized && <span>🌿{formatTime(plot.fertilizedUntil! - now)}</span>}
                   </div>
 
-                  {/* Action buttons */}
-                  <div className="absolute bottom-0.5 left-0.5 right-0.5 flex gap-0.5">
+                  <div className="absolute bottom-2 left-2 right-2 flex gap-1.5">
                     <button
                       onClick={() => handleWater(i)}
-                      className="flex-1 text-[8px] bg-blue-500/30 text-foreground rounded px-0.5 hover:bg-blue-500/50 transition-colors"
+                      className="flex-1 text-sm backdrop-blur-md bg-blue-500/30 text-foreground rounded-lg px-2 py-1 hover:bg-blue-500/50 hover:scale-105 transition-all border border-blue-400/30 shadow-lg"
                       title="Water (2× for 5min)"
                     >
                       💧
@@ -123,7 +128,7 @@ export default function FarmGrid() {
                     <button
                       onClick={() => handleFertilize(i)}
                       disabled={state.fertilizers <= 0}
-                      className="flex-1 text-[8px] bg-primary/30 text-foreground rounded px-0.5 hover:bg-primary/50 transition-colors disabled:opacity-30"
+                      className="flex-1 text-sm backdrop-blur-md bg-green-500/30 text-foreground rounded-lg px-2 py-1 hover:bg-green-500/50 hover:scale-105 transition-all disabled:opacity-30 border border-green-400/30 shadow-lg"
                       title="Fertilize (2× for 10min)"
                     >
                       🌿
@@ -132,14 +137,14 @@ export default function FarmGrid() {
 
                   <button
                     onClick={() => handleRemove(i)}
-                    className="absolute top-1 right-1 text-[8px] bg-destructive/80 text-destructive-foreground rounded px-1 hover:bg-destructive transition-colors"
+                    className="absolute top-2 right-2 text-xs backdrop-blur-md bg-destructive/70 text-destructive-foreground rounded-lg px-2 py-1 hover:bg-destructive hover:scale-105 transition-all border border-red-400/30 shadow-lg font-bold"
                   >
                     ✕
                   </button>
                 </div>
               ) : (
-                <div className="w-full aspect-square bg-plot-empty rounded border-2 border-dashed border-primary/20 flex items-center justify-center">
-                  <span className="text-muted-foreground text-sm">Empty</span>
+                <div className="w-full aspect-square backdrop-blur-md bg-gradient-to-br from-green-500/5 to-emerald-500/5 rounded-2xl border-2 border-dashed border-primary/20 flex items-center justify-center hover:border-primary/40 transition-all shadow-inner">
+                  <span className="text-muted-foreground text-sm font-medium">Empty</span>
                 </div>
               )}
             </div>

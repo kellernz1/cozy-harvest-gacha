@@ -35,32 +35,30 @@ function GameUI() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col max-w-lg mx-auto">
+    <div className="min-h-screen flex flex-col max-w-2xl mx-auto shadow-2xl">
       <HUD />
 
-      {/* Tab navigation */}
-      <div className="flex border-b-2 border-border bg-card">
+      <div className="flex backdrop-blur-xl bg-card/20 border-b border-border/50">
         {TABS.map(tab => (
           <button
             key={tab.key}
             onClick={() => switchTab(tab.key)}
-            className={`flex-1 py-2 text-center font-body text-base transition-all relative
+            className={`flex-1 py-3 text-center font-body text-sm font-medium transition-all relative group
               ${activeTab === tab.key
-                ? 'text-accent'
+                ? 'text-primary'
                 : 'text-muted-foreground hover:text-foreground'
               }`}
           >
-            <span className="mr-0.5">{tab.emoji}</span>
-            <span className="hidden sm:inline">{tab.label}</span>
+            <span className="text-xl mb-1 block group-hover:scale-110 transition-transform">{tab.emoji}</span>
+            <span className="text-xs">{tab.label}</span>
             {activeTab === tab.key && (
-              <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-accent" />
+              <div className="absolute bottom-0 left-4 right-4 h-1 bg-gradient-to-r from-primary to-accent rounded-t-full shadow-lg" />
             )}
           </button>
         ))}
       </div>
 
-      {/* Tab content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto backdrop-blur-sm bg-background/40">
         {activeTab === 'farm' && <FarmGrid />}
         {activeTab === 'inventory' && <Inventory />}
         {activeTab === 'shop' && <Shop />}

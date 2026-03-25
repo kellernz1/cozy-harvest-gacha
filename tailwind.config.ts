@@ -14,8 +14,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        heading: ["'Press Start 2P'", "monospace"],
-        body: ["'VT323'", "monospace"],
+        heading: ["'Outfit'", "sans-serif"],
+        body: ["'Poppins'", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",

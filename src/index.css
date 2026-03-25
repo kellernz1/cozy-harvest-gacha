@@ -4,49 +4,49 @@
 
 @layer base {
   :root {
-    --background: 40 30% 12%;
-    --foreground: 42 60% 85%;
+    --background: 220 25% 8%;
+    --foreground: 220 15% 95%;
 
-    --card: 35 25% 18%;
-    --card-foreground: 42 60% 85%;
+    --card: 220 20% 12%;
+    --card-foreground: 220 15% 95%;
 
-    --popover: 35 25% 15%;
-    --popover-foreground: 42 60% 85%;
+    --popover: 220 25% 10%;
+    --popover-foreground: 220 15% 95%;
 
-    --primary: 85 45% 45%;
-    --primary-foreground: 40 30% 10%;
+    --primary: 160 65% 50%;
+    --primary-foreground: 220 25% 8%;
 
-    --secondary: 30 40% 28%;
-    --secondary-foreground: 42 55% 80%;
+    --secondary: 200 50% 45%;
+    --secondary-foreground: 220 15% 95%;
 
-    --muted: 35 20% 22%;
-    --muted-foreground: 40 20% 55%;
+    --muted: 220 15% 18%;
+    --muted-foreground: 220 10% 60%;
 
-    --accent: 45 70% 55%;
-    --accent-foreground: 40 30% 10%;
+    --accent: 280 70% 60%;
+    --accent-foreground: 220 15% 95%;
 
-    --destructive: 0 60% 50%;
-    --destructive-foreground: 0 0% 95%;
+    --destructive: 0 70% 55%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 35 20% 25%;
-    --input: 35 20% 25%;
-    --ring: 85 45% 45%;
+    --border: 220 20% 20%;
+    --input: 220 20% 15%;
+    --ring: 160 65% 50%;
 
-    --radius: 0.25rem;
+    --radius: 1rem;
 
     /* Rarity colors */
-    --rarity-common: 0 0% 60%;
-    --rarity-uncommon: 120 40% 45%;
-    --rarity-rare: 210 70% 55%;
-    --rarity-epic: 270 60% 55%;
-    --rarity-legendary: 42 90% 55%;
+    --rarity-common: 0 0% 70%;
+    --rarity-uncommon: 140 50% 55%;
+    --rarity-rare: 210 80% 60%;
+    --rarity-epic: 280 70% 65%;
+    --rarity-legendary: 45 100% 60%;
 
     /* Game-specific */
-    --coin: 48 95% 55%;
-    --coin-foreground: 40 30% 10%;
-    --plot-empty: 100 25% 30%;
-    --plot-locked: 35 15% 20%;
-    --income-float: 85 60% 60%;
+    --coin: 45 100% 60%;
+    --coin-foreground: 220 25% 8%;
+    --plot-empty: 160 30% 25%;
+    --plot-locked: 220 15% 15%;
+    --income-float: 160 70% 65%;
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -57,8 +57,8 @@
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
 
-    --font-heading: 'Press Start 2P', monospace;
-    --font-body: 'VT323', monospace;
+    --font-heading: 'Outfit', sans-serif;
+    --font-body: 'Poppins', sans-serif;
   }
 }
 
@@ -70,12 +70,15 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-body);
-    font-size: 1.25rem;
-    image-rendering: pixelated;
+    font-size: 1rem;
+    font-weight: 400;
+    background: linear-gradient(135deg, hsl(220 25% 8%) 0%, hsl(240 20% 12%) 50%, hsl(260 25% 10%) 100%);
+    background-attachment: fixed;
   }
 
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading);
+    font-weight: 600;
   }
 }
 
@@ -91,13 +94,13 @@
 
 /* Rarity glow effects */
 @keyframes legendary-glow {
-  0%, 100% { box-shadow: 0 0 8px 2px hsl(42 90% 55% / 0.6), 0 0 20px 4px hsl(42 90% 55% / 0.3); }
-  50% { box-shadow: 0 0 16px 4px hsl(42 90% 55% / 0.8), 0 0 32px 8px hsl(42 90% 55% / 0.4); }
+  0%, 100% { box-shadow: 0 0 20px 4px hsl(45 100% 60% / 0.6), 0 0 40px 8px hsl(45 100% 60% / 0.3); }
+  50% { box-shadow: 0 0 30px 6px hsl(45 100% 60% / 0.8), 0 0 60px 12px hsl(45 100% 60% / 0.4); }
 }
 
 @keyframes epic-glow {
-  0%, 100% { box-shadow: 0 0 6px 2px hsl(270 60% 55% / 0.5); }
-  50% { box-shadow: 0 0 12px 4px hsl(270 60% 55% / 0.7); }
+  0%, 100% { box-shadow: 0 0 15px 3px hsl(280 70% 65% / 0.5); }
+  50% { box-shadow: 0 0 25px 5px hsl(280 70% 65% / 0.7); }
 }
 
 @keyframes card-flip {
@@ -138,7 +141,7 @@
 .animate-float-up { animation: float-up 1.5s ease-out forwards; }
 .animate-coin-count { animation: coin-count 0.3s ease-out; }
 .animate-shimmer {
-  background: linear-gradient(90deg, transparent 0%, hsl(42 90% 55% / 0.3) 50%, transparent 100%);
+  background: linear-gradient(90deg, transparent 0%, hsl(45 100% 60% / 0.3) 50%, transparent 100%);
   background-size: 200% 100%;
   animation: shimmer 2s linear infinite;
 }
