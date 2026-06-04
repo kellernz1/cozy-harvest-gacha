@@ -28,7 +28,7 @@ export const SEED_EMOJIS: Record<SeedType, string> = {
   Banana: '🍌',
   Strawberry: '🍓',
   Pineapple: '🍍',
-  Blueberry: '🫐',
+  Blueberry: '🔵',
   Peach: '🍑',
 };
 
