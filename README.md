@@ -1,5 +1,4 @@
-
-﻿# 🌾 Cozy Harvest Gacha
+# 🌾 Cozy Harvest Gacha
 
 Cozy Harvest Gacha is a small browser farming game built with Vite, React, TypeScript, and Tailwind CSS.
 
