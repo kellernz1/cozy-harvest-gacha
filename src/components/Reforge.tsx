@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useGame, rollPack } from '../game/state';
-import { SEED_EMOJIS, RARITY_INCOME, REFORGE_RATES, getNextRarity, type Seed, type SeedType, type Rarity, RARITIES } from '../game/constants';
+import { SEED_EMOJIS, REFORGE_RATES, getNextRarity, type Seed, type SeedType, type Rarity } from '../game/constants';
 import { SFX } from '../game/sounds';
 import { toast } from 'sonner';
 
@@ -65,12 +65,11 @@ export default function Reforge() {
     const success = Math.random() * 100 < rate;
 
     // Dispatch reforge
-    dispatch({ type: 'REFORGE', seedIds: [...selected] });
+    dispatch({ type: 'REFORGE', seedIds: [...selected], success });
 
     setTimeout(() => {
       if (success) {
         SFX.reforgeSuccess();
-        const newSeed = state.inventory.find(s => false) as Seed | undefined; // placeholder
         setResult({ success: true, rarity: next });
         toast.success(`Reforge success! Got ${next} ${seedType}! ✨`);
       } else {

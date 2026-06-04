@@ -6,9 +6,10 @@ import Inventory from '../components/Inventory';
 import Shop from '../components/Shop';
 import Reforge from '../components/Reforge';
 import SkillTree from '../components/SkillTree';
+import Goals from '../components/Goals';
 import { SFX } from '../game/sounds';
 
-type Tab = 'farm' | 'inventory' | 'shop' | 'reforge' | 'skills';
+type Tab = 'farm' | 'inventory' | 'shop' | 'reforge' | 'skills' | 'goals';
 
 const TABS: { key: Tab; label: string; emoji: string }[] = [
   { key: 'farm', label: 'Farm', emoji: '🌾' },
@@ -16,6 +17,7 @@ const TABS: { key: Tab; label: string; emoji: string }[] = [
   { key: 'shop', label: 'Shop', emoji: '🛒' },
   { key: 'reforge', label: 'Reforge', emoji: '⚗️' },
   { key: 'skills', label: 'Skills', emoji: '⭐' },
+  { key: 'goals', label: 'Goals', emoji: '📜' },
 ];
 
 export default function Index() {
@@ -35,15 +37,15 @@ function GameUI() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col max-w-2xl mx-auto shadow-2xl">
+    <div className="min-h-screen flex flex-col max-w-5xl mx-auto bg-background/80 shadow-2xl">
       <HUD />
 
-      <div className="flex backdrop-blur-xl bg-card/20 border-b border-border/50">
+      <div className="flex overflow-x-auto border-b border-border/60 bg-white/70 backdrop-blur-xl">
         {TABS.map(tab => (
           <button
             key={tab.key}
             onClick={() => switchTab(tab.key)}
-            className={`flex-1 py-3 text-center font-body text-sm font-medium transition-all relative group
+            className={`relative min-w-20 flex-1 py-3 text-center font-body text-sm font-medium transition-all group
               ${activeTab === tab.key
                 ? 'text-primary'
                 : 'text-muted-foreground hover:text-foreground'
@@ -64,6 +66,7 @@ function GameUI() {
         {activeTab === 'shop' && <Shop />}
         {activeTab === 'reforge' && <Reforge />}
         {activeTab === 'skills' && <SkillTree />}
+        {activeTab === 'goals' && <Goals />}
       </div>
     </div>
   );

@@ -1,10 +1,11 @@
-import { createContext, useContext, useReducer, useEffect, useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useReducer, useEffect, useState, type ReactNode } from 'react';
 import {
   type Seed, type Rarity, type SeedType, type SkillId,
   RARITY_INCOME, SEED_TYPES, PACKS, PLOT_COSTS,
   TOTAL_PLOTS, INCOME_INTERVAL, MAX_OFFLINE_TICKS, STORAGE_KEY, RARITIES,
   SKILLS, xpForLevel, XP_REWARDS, FERTILIZER_DURATION, WATERING_DURATION,
   REFORGE_RATES, getNextRarity,
+  type DailyGoalId, type AchievementId,
 } from './constants';
 import { SFX } from './sounds';
 import { toast } from 'sonner';
@@ -31,6 +32,28 @@ export interface GameState {
   skills: SkillLevels;
   fertilizers: number; // owned fertilizer items
   muted: boolean;
+  stats: GameStats;
+  daily: DailyStats;
+  claimedDailyGoals: DailyGoalId[];
+  claimedAchievements: AchievementId[];
+}
+
+export interface GameStats {
+  incomeEarned: number;
+  packsOpened: number;
+  seedsPlanted: number;
+  seedsSold: number;
+  reforges: number;
+  plotsUnlocked: number;
+  legendaryFound: boolean;
+}
+
+export interface DailyStats {
+  date: string;
+  incomeEarned: number;
+  packsOpened: number;
+  seedsPlanted: number;
+  reforges: number;
 }
 
 const defaultState = (): GameState => ({
@@ -49,6 +72,24 @@ const defaultState = (): GameState => ({
   skills: { packDiscount: 0, yieldBoost: 0, speedBoost: 0, autoWater: 0 },
   fertilizers: 0,
   muted: false,
+  stats: {
+    incomeEarned: 0,
+    packsOpened: 0,
+    seedsPlanted: 0,
+    seedsSold: 0,
+    reforges: 0,
+    plotsUnlocked: 1,
+    legendaryFound: false,
+  },
+  daily: {
+    date: todayKey(),
+    incomeEarned: 0,
+    packsOpened: 0,
+    seedsPlanted: 0,
+    reforges: 0,
+  },
+  claimedDailyGoals: [],
+  claimedAchievements: [],
 });
 
 // === ACTIONS ===
@@ -68,7 +109,9 @@ type Action =
   | { type: 'BUY_FERTILIZER' }
   | { type: 'APPLY_FERTILIZER'; plotIndex: number }
   | { type: 'WATER_PLOT'; plotIndex: number }
-  | { type: 'REFORGE'; seedIds: string[] }
+  | { type: 'REFORGE'; seedIds: string[]; success?: boolean }
+  | { type: 'CLAIM_DAILY_GOAL'; goalId: DailyGoalId; reward: number }
+  | { type: 'CLAIM_ACHIEVEMENT'; achievementId: AchievementId; reward: number }
   | { type: 'TOGGLE_MUTE' };
 
 let idCounter = Date.now();
@@ -132,6 +175,28 @@ export function getDiscountedCost(baseCost: number, skills: SkillLevels): number
   return Math.floor(baseCost * (1 - discount / 100));
 }
 
+export function todayKey(date = new Date()): string {
+  return date.toISOString().slice(0, 10);
+}
+
+export function getMarketBonus(date = new Date()): { seedType: SeedType; multiplier: number } {
+  const day = Math.floor(date.getTime() / 86_400_000);
+  return {
+    seedType: SEED_TYPES[day % SEED_TYPES.length],
+    multiplier: 1.5,
+  };
+}
+
+function normalizeDaily(state: GameState): GameState {
+  const date = todayKey();
+  if (state.daily.date === date) return state;
+  return {
+    ...state,
+    daily: { date, incomeEarned: 0, packsOpened: 0, seedsPlanted: 0, reforges: 0 },
+    claimedDailyGoals: [],
+  };
+}
+
 // === XP HELPERS ===
 
 function addXpToState(state: GameState, amount: number): GameState {
@@ -160,6 +225,8 @@ function addXpToState(state: GameState, amount: number): GameState {
 // === REDUCER ===
 
 function gameReducer(state: GameState, action: Action): GameState {
+  state = normalizeDaily(state);
+
   switch (action.type) {
     case 'ADD_SEEDS':
       return { ...state, inventory: [...state.inventory, ...action.seeds] };
@@ -169,7 +236,12 @@ function gameReducer(state: GameState, action: Action): GameState {
       if (!pack || state.level < pack.minLevel) return state;
       const cost = getDiscountedCost(pack.cost, state.skills);
       if (state.money < cost) return state;
-      const s = { ...state, money: state.money - cost };
+      const s = {
+        ...state,
+        money: state.money - cost,
+        stats: { ...state.stats, packsOpened: state.stats.packsOpened + 1 },
+        daily: { ...state.daily, packsOpened: state.daily.packsOpened + 1 },
+      };
       return addXpToState(s, XP_REWARDS.packOpen);
     }
 
@@ -182,7 +254,17 @@ function gameReducer(state: GameState, action: Action): GameState {
       const [seed] = newInventory.splice(seedIdx, 1);
       const newPlots = [...state.plots];
       newPlots[action.plotIndex] = { ...plot, seed };
-      return { ...state, inventory: newInventory, plots: newPlots };
+      return {
+        ...state,
+        inventory: newInventory,
+        plots: newPlots,
+        stats: {
+          ...state.stats,
+          seedsPlanted: state.stats.seedsPlanted + 1,
+          legendaryFound: state.stats.legendaryFound || seed.rarity === 'Legendary',
+        },
+        daily: { ...state.daily, seedsPlanted: state.daily.seedsPlanted + 1 },
+      };
     }
 
     case 'REMOVE_SEED': {
@@ -198,10 +280,15 @@ function gameReducer(state: GameState, action: Action): GameState {
       const seedIdx = state.inventory.findIndex(s => s.id === action.seedId);
       if (seedIdx === -1) return state;
       const seed = state.inventory[seedIdx];
-      const value = RARITY_INCOME[seed.rarity];
+      const value = getSeedValue(seed);
       const newInventory = [...state.inventory];
       newInventory.splice(seedIdx, 1);
-      return { ...state, inventory: newInventory, money: state.money + value };
+      return {
+        ...state,
+        inventory: newInventory,
+        money: state.money + value,
+        stats: { ...state.stats, seedsSold: state.stats.seedsSold + 1 },
+      };
     }
 
     case 'UNLOCK_PLOT': {
@@ -211,11 +298,22 @@ function gameReducer(state: GameState, action: Action): GameState {
       if (!plot || plot.unlocked) return state;
       const newPlots = [...state.plots];
       newPlots[action.plotIndex] = { ...plot, unlocked: true };
-      return { ...state, plots: newPlots, money: state.money - cost };
+      return {
+        ...state,
+        plots: newPlots,
+        money: state.money - cost,
+        stats: { ...state.stats, plotsUnlocked: state.stats.plotsUnlocked + 1 },
+      };
     }
 
     case 'TICK_INCOME': {
-      const s = { ...state, money: state.money + action.amount, lastTick: Date.now() };
+      const s = {
+        ...state,
+        money: state.money + action.amount,
+        lastTick: Date.now(),
+        stats: { ...state.stats, incomeEarned: state.stats.incomeEarned + action.amount },
+        daily: { ...state.daily, incomeEarned: state.daily.incomeEarned + action.amount },
+      };
       return addXpToState(s, XP_REWARDS.incomeTick);
     }
 
@@ -276,7 +374,7 @@ function gameReducer(state: GameState, action: Action): GameState {
       if (!nextRarity) return state;
 
       // Remove 3 seeds
-      let newInventory = [...state.inventory];
+      const newInventory = [...state.inventory];
       for (const id of action.seedIds) {
         const idx = newInventory.findIndex(s => s.id === id);
         if (idx !== -1) newInventory.splice(idx, 1);
@@ -284,17 +382,43 @@ function gameReducer(state: GameState, action: Action): GameState {
 
       // Roll for success
       const rate = REFORGE_RATES[rarity] || 0;
-      const success = Math.random() * 100 < rate;
+      const success = action.success ?? Math.random() * 100 < rate;
 
-      let s = { ...state, inventory: newInventory };
+      let s = {
+        ...state,
+        inventory: newInventory,
+        stats: { ...state.stats, reforges: state.stats.reforges + 1 },
+        daily: { ...state.daily, reforges: state.daily.reforges + 1 },
+      };
       s = addXpToState(s, XP_REWARDS.reforge);
 
       if (success) {
         const newSeed: Seed = { id: genId(), type: seedType, rarity: nextRarity };
         s.inventory = [...s.inventory, newSeed];
+        s.stats = { ...s.stats, legendaryFound: s.stats.legendaryFound || nextRarity === 'Legendary' };
       }
 
       return s;
+    }
+
+    case 'CLAIM_DAILY_GOAL': {
+      if (state.claimedDailyGoals.includes(action.goalId)) return state;
+      const s = {
+        ...state,
+        money: state.money + action.reward,
+        claimedDailyGoals: [...state.claimedDailyGoals, action.goalId],
+      };
+      return addXpToState(s, XP_REWARDS.dailyGoal);
+    }
+
+    case 'CLAIM_ACHIEVEMENT': {
+      if (state.claimedAchievements.includes(action.achievementId)) return state;
+      const s = {
+        ...state,
+        money: state.money + action.reward,
+        claimedAchievements: [...state.claimedAchievements, action.achievementId],
+      };
+      return addXpToState(s, XP_REWARDS.achievement);
     }
 
     case 'TOGGLE_MUTE':
@@ -319,6 +443,7 @@ interface GameContextType {
   totalIncome: number;
   floatingIncomes: Map<number, number>;
   currentInterval: number;
+  marketBonus: { seedType: SeedType; multiplier: number };
 }
 
 const GameContext = createContext<GameContextType | null>(null);
@@ -337,7 +462,15 @@ function loadState(): GameState {
     if (raw) {
       const parsed = JSON.parse(raw);
       const def = defaultState();
-      return { ...def, ...parsed, skills: { ...def.skills, ...parsed.skills } };
+      return normalizeDaily({
+        ...def,
+        ...parsed,
+        skills: { ...def.skills, ...parsed.skills },
+        stats: { ...def.stats, ...parsed.stats },
+        daily: { ...def.daily, ...parsed.daily },
+        claimedDailyGoals: parsed.claimedDailyGoals ?? [],
+        claimedAchievements: parsed.claimedAchievements ?? [],
+      });
     }
   } catch { /* ignore */ }
   return defaultState();
@@ -351,6 +484,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(gameReducer, null, loadState);
   const [floatingIncomes, setFloatingIncomes] = useState<Map<number, number>>(new Map());
   const currentInterval = getBaseInterval(state.skills);
+  const marketBonus = getMarketBonus();
 
   // Save on every state change
   useEffect(() => {
@@ -390,7 +524,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       });
     }, autoInterval);
     return () => clearInterval(timer);
-  }, [state.skills.autoWater, state.plots]);
+  }, [state.skills, state.skills.autoWater, state.plots]);
 
   // Passive income interval
   useEffect(() => {
@@ -411,20 +545,28 @@ export function GameProvider({ children }: { children: ReactNode }) {
       }
     }, currentInterval);
     return () => clearInterval(interval);
-  }, [state.plots, currentInterval]);
+  }, [state, state.plots, state.skills, currentInterval]);
 
   const totalIncome = calcTotalIncome(state, Date.now());
 
   return (
-    <GameContext.Provider value={{ state, dispatch, totalIncome, floatingIncomes, currentInterval }}>
+    <GameContext.Provider value={{ state, dispatch, totalIncome, floatingIncomes, currentInterval, marketBonus }}>
       {children}
     </GameContext.Provider>
   );
 }
 
+export function getSeedValue(seed: Seed, now = new Date()): number {
+  const market = getMarketBonus(now);
+  const base = RARITY_INCOME[seed.rarity];
+  return seed.type === market.seedType ? Math.floor(base * market.multiplier) : base;
+}
+
 function getPlotIncome(plot: PlotState, skills: SkillLevels, now: number): number {
   if (!plot.seed) return 0;
   let income = RARITY_INCOME[plot.seed.rarity];
+  const market = getMarketBonus(new Date(now));
+  if (plot.seed.type === market.seedType) income = Math.floor(income * market.multiplier);
   income = Math.floor(income * getYieldMultiplier(skills));
   // Watering 2x
   if (plot.wateredUntil && plot.wateredUntil > now) income *= 2;

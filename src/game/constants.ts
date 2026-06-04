@@ -20,7 +20,7 @@ export const RARITY_COLORS: Record<Rarity, string> = {
   Legendary: 'rarity-legendary',
 };
 
-export type SeedType = 'Apple' | 'Orange' | 'Banana' | 'Strawberry' | 'Pineapple';
+export type SeedType = 'Apple' | 'Orange' | 'Banana' | 'Strawberry' | 'Pineapple' | 'Blueberry' | 'Peach';
 
 export const SEED_EMOJIS: Record<SeedType, string> = {
   Apple: '🍎',
@@ -28,9 +28,11 @@ export const SEED_EMOJIS: Record<SeedType, string> = {
   Banana: '🍌',
   Strawberry: '🍓',
   Pineapple: '🍍',
+  Blueberry: '🫐',
+  Peach: '🍑',
 };
 
-export const SEED_TYPES: SeedType[] = ['Apple', 'Orange', 'Banana', 'Strawberry', 'Pineapple'];
+export const SEED_TYPES: SeedType[] = ['Apple', 'Orange', 'Banana', 'Strawberry', 'Pineapple', 'Blueberry', 'Peach'];
 
 export interface Seed {
   id: string;
@@ -51,6 +53,7 @@ export const PACKS: Pack[] = [
   { id: 1, name: 'Basic Pack', cost: 10, seedCount: 1, rates: { Common: 60, Uncommon: 30, Rare: 10 }, minLevel: 1 },
   { id: 2, name: 'Premium Pack', cost: 150, seedCount: 1, rates: { Common: 45, Uncommon: 30, Rare: 18, Epic: 7 }, minLevel: 5 },
   { id: 3, name: 'Legendary Pack', cost: 2000, seedCount: 1, rates: { Uncommon: 40, Rare: 35, Epic: 18, Legendary: 7 }, minLevel: 15 },
+  { id: 4, name: 'Orchard Crate', cost: 650, seedCount: 3, rates: { Common: 35, Uncommon: 35, Rare: 22, Epic: 7, Legendary: 1 }, minLevel: 8 },
 ];
 
 export const PLOT_COSTS = [0, 10, 20, 40, 80, 160, 320, 640, 1280];
@@ -94,7 +97,44 @@ export const XP_REWARDS = {
   incomeTick: 5,
   packOpen: 15,
   reforge: 25,
+  dailyGoal: 50,
+  achievement: 100,
 };
+
+export type DailyGoalId = 'dailyPacks' | 'dailyPlanting' | 'dailyIncome' | 'dailyReforge';
+
+export interface DailyGoalDef {
+  id: DailyGoalId;
+  label: string;
+  description: string;
+  target: number;
+  reward: number;
+}
+
+export const DAILY_GOALS: DailyGoalDef[] = [
+  { id: 'dailyPacks', label: 'Open 3 packs', description: 'Buy seed packs from the shop.', target: 3, reward: 75 },
+  { id: 'dailyPlanting', label: 'Plant 5 seeds', description: 'Fill empty plots with fresh seeds.', target: 5, reward: 100 },
+  { id: 'dailyIncome', label: 'Earn $500', description: 'Collect passive income from your farm.', target: 500, reward: 150 },
+  { id: 'dailyReforge', label: 'Reforge once', description: 'Attempt a seed upgrade.', target: 1, reward: 125 },
+];
+
+export type AchievementId = 'firstHarvest' | 'packCollector' | 'plotPlanner' | 'rareFarmer' | 'reforgeApprentice';
+
+export interface AchievementDef {
+  id: AchievementId;
+  label: string;
+  description: string;
+  target: number;
+  reward: number;
+}
+
+export const ACHIEVEMENTS: AchievementDef[] = [
+  { id: 'firstHarvest', label: 'First Harvest', description: 'Earn $250 total from your farm.', target: 250, reward: 150 },
+  { id: 'packCollector', label: 'Pack Collector', description: 'Open 25 seed packs.', target: 25, reward: 350 },
+  { id: 'plotPlanner', label: 'Plot Planner', description: 'Unlock 6 farm plots.', target: 6, reward: 500 },
+  { id: 'rareFarmer', label: 'Rare Farmer', description: 'Own or plant a Legendary seed.', target: 1, reward: 900 },
+  { id: 'reforgeApprentice', label: 'Reforge Apprentice', description: 'Attempt 10 reforges.', target: 10, reward: 650 },
+];
 
 // === SKILL TREE ===
 export type SkillId = 'packDiscount' | 'yieldBoost' | 'speedBoost' | 'autoWater';

@@ -3,6 +3,7 @@ import { useGame, rollPack, getDiscountedCost } from '../game/state';
 import { PACKS, SEED_EMOJIS, RARITY_INCOME, FERTILIZER_COST, type Seed, type Rarity } from '../game/constants';
 import { SFX } from '../game/sounds';
 import { toast } from 'sonner';
+import CoinIcon from './CoinIcon';
 
 export default function Shop() {
   const { state, dispatch } = useGame();
@@ -84,9 +85,9 @@ export default function Shop() {
                   <button
                     onClick={() => handleBuyPack(pack.id)}
                     disabled={state.money < cost || revealing !== null}
-                    className="bg-accent text-accent-foreground font-heading text-[10px] px-3 py-2 rounded hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="inline-flex items-center gap-1.5 bg-accent text-accent-foreground font-heading text-[10px] px-3 py-2 rounded hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    🪙 ${cost}
+                    <CoinIcon className="h-4 w-4 text-[8px]" /> ${cost}
                   </button>
                 )}
               </div>
@@ -112,9 +113,9 @@ export default function Shop() {
             <button
               onClick={handleBuyFertilizer}
               disabled={state.money < FERTILIZER_COST}
-              className="bg-primary text-primary-foreground font-heading text-[10px] px-3 py-2 rounded hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-1.5 bg-primary text-primary-foreground font-heading text-[10px] px-3 py-2 rounded hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              🪙 ${FERTILIZER_COST}
+              <CoinIcon className="h-4 w-4 text-[8px]" /> ${FERTILIZER_COST}
             </button>
           </div>
         </div>

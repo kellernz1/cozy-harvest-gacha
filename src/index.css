@@ -4,35 +4,35 @@
 
 @layer base {
   :root {
-    --background: 220 25% 8%;
-    --foreground: 220 15% 95%;
+    --background: 43 58% 94%;
+    --foreground: 132 28% 18%;
 
-    --card: 220 20% 12%;
-    --card-foreground: 220 15% 95%;
+    --card: 42 65% 97%;
+    --card-foreground: 132 28% 18%;
 
-    --popover: 220 25% 10%;
-    --popover-foreground: 220 15% 95%;
+    --popover: 42 65% 98%;
+    --popover-foreground: 132 28% 18%;
 
-    --primary: 160 65% 50%;
-    --primary-foreground: 220 25% 8%;
+    --primary: 143 46% 38%;
+    --primary-foreground: 42 65% 97%;
 
-    --secondary: 200 50% 45%;
-    --secondary-foreground: 220 15% 95%;
+    --secondary: 31 72% 72%;
+    --secondary-foreground: 132 28% 18%;
 
-    --muted: 220 15% 18%;
-    --muted-foreground: 220 10% 60%;
+    --muted: 42 28% 86%;
+    --muted-foreground: 126 11% 43%;
 
-    --accent: 280 70% 60%;
-    --accent-foreground: 220 15% 95%;
+    --accent: 22 83% 58%;
+    --accent-foreground: 42 65% 97%;
 
     --destructive: 0 70% 55%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 220 20% 20%;
-    --input: 220 20% 15%;
-    --ring: 160 65% 50%;
+    --border: 39 27% 75%;
+    --input: 42 65% 97%;
+    --ring: 143 46% 38%;
 
-    --radius: 1rem;
+    --radius: 0.75rem;
 
     /* Rarity colors */
     --rarity-common: 0 0% 70%;
@@ -44,9 +44,9 @@
     /* Game-specific */
     --coin: 45 100% 60%;
     --coin-foreground: 220 25% 8%;
-    --plot-empty: 160 30% 25%;
-    --plot-locked: 220 15% 15%;
-    --income-float: 160 70% 65%;
+    --plot-empty: 115 35% 75%;
+    --plot-locked: 36 18% 74%;
+    --income-float: 143 46% 38%;
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -72,7 +72,10 @@
     font-family: var(--font-body);
     font-size: 1rem;
     font-weight: 400;
-    background: linear-gradient(135deg, hsl(220 25% 8%) 0%, hsl(240 20% 12%) 50%, hsl(260 25% 10%) 100%);
+    background:
+      radial-gradient(circle at 15% 10%, hsl(48 88% 88% / 0.95), transparent 28rem),
+      radial-gradient(circle at 90% 0%, hsl(143 45% 83% / 0.75), transparent 26rem),
+      linear-gradient(180deg, hsl(43 58% 94%) 0%, hsl(38 58% 90%) 100%);
     background-attachment: fixed;
   }
 

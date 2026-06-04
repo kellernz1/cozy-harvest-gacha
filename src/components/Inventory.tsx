@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useGame } from '../game/state';
+import { getSeedValue, useGame } from '../game/state';
 import { RARITY_INCOME, SEED_EMOJIS, type Seed } from '../game/constants';
 import { SFX } from '../game/sounds';
 import { toast } from 'sonner';
@@ -10,7 +10,7 @@ export default function Inventory() {
   const [plantingSeed, setPlantingSeed] = useState<Seed | null>(null);
 
   const handleSell = (seed: Seed) => {
-    const value = RARITY_INCOME[seed.rarity];
+    const value = getSeedValue(seed);
     SFX.buttonClick();
     dispatch({ type: 'SELL_SEED', seedId: seed.id });
     toast.success(`Sold ${SEED_EMOJIS[seed.type]} ${seed.type} for $${value}!`);
@@ -69,6 +69,7 @@ export default function Inventory() {
 
 function SeedCard({ seed, onPlant, onSell }: { seed: Seed; onPlant: () => void; onSell: () => void }) {
   const income = RARITY_INCOME[seed.rarity];
+  const sellValue = getSeedValue(seed);
   const isLegendary = seed.rarity === 'Legendary';
   const isEpic = seed.rarity === 'Epic';
 
@@ -94,7 +95,7 @@ function SeedCard({ seed, onPlant, onSell }: { seed: Seed; onPlant: () => void; 
           onClick={onSell}
           className="flex-1 text-xs bg-secondary text-secondary-foreground rounded px-2 py-1 hover:brightness-110 transition-all font-body"
         >
-          Sell ${income}
+          Sell ${sellValue}
         </button>
       </div>
     </div>
